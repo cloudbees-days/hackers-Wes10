@@ -1,0 +1,54 @@
+apiVersion: automation.cloudbees.io/v1alpha1
+kind: workflow
+name: Synaptics Core Pipeline
+# This workflow emulates running the Synaptics Core Pipeline model
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    tags:
+      - Synaptics
+permissions:
+  scm-token-own: read
+  scm-token-org: read
+  id-token: write
+jobs:
+  SynapticsTest1:
+    steps:
+      - name: Run Jenkins Job
+      # This runs the Synaptics Jenkins Pipeline with user inputs
+        kind: test
+        with:
+          url: https://sda.preview.cb-demos.io/bcauthen-demos-mc-1/
+          username: ${{ secrets.WES_JENKINS_USERNAME }}
+          token: ${{ secrets.WES_JENKINS_TOKEN }}
+          job-name: Synaptics_Example
+        uses: cloudbees-io/jenkins-run-job@v2
+        continue-on-error: true
+      - name: Get source code
+        uses: cloudbees-io/checkout@v1
+        continue-on-error: true
+      - name: Run unit tests
+        kind: test
+        uses: docker://node:lts
+        continue-on-error: true
+        run: |-
+          npm ci
+          npm run test:unit
+          npx jest --coverage >> $CLOUDBEES_OUTPUTS/CODE_COVERAGE
+    outputs:
+      CODE_COVERAGE: ${{ steps.RunUnitTest.outputs.CODE_COVERAGE }}
+  NestedPipeline:
+    steps:
+      - name: Run Nested Jenkins Pipelines
+      # This runs the Synaptics Nested Jenkins Pipelines
+        kind: test
+        uses: cloudbees-io/jenkins-run-job@v2
+        continue-on-error: true
+        with:
+          url: https://sda.preview.cb-demos.io/bcauthen-demos-mc-1/
+          username: ${{ secrets.WES_JENKINS_USERNAME }}
+          token: ${{ secrets.WES_JENKINS_TOKEN }}
+          job-name: JenkinsPipeline1
+    needs: SynapticsTest1
