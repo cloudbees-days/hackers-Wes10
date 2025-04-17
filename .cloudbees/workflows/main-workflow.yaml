@@ -100,12 +100,15 @@ jobs:
           format: MARKDOWN
     needs: test
   scan:
-    outputs:
-      BLOCKER_COUNT: ${{ steps.FetchSonarQubeIssues.outputs.BLOCKER_COUNT }}
-      CRITICAL_COUNT: ${{ steps.FetchSonarQubeIssues.outputs.CRITICAL_COUNT }}
-      MAJOR_COUNT: ${{ steps.FetchSonarQubeIssues.outputs.MAJOR_COUNT }}
-      MINOR_COUNT: ${{ steps.FetchSonarQubeIssues.outputs.MINOR_COUNT }}
     steps:
+      - name: Run Jenkins Job
+        kind: test
+        uses: cloudbees-io/jenkins-run-job@v2
+        with:
+          url: https://sda.preview.cb-demos.io/westest/
+          username: ${{ secrets.WES_JENKINS_USERNAME }}
+          token: ${{ secrets.WES_JENKINS_TOKEN }}
+          job-name: testandvalidate
       - name: Checkout
         uses: cloudbees-io/checkout@v1
       - name: Get code coverage
@@ -114,17 +117,17 @@ jobs:
         run: |
           npm ci
           npm run test:coverage
-      - uses: cloudbees-io/sonarqube-bundled-sast-scan-code@v1
-        name: Scan with SonarQube
+      - name: Scan with SonarQube
         kind: scan
+        uses: cloudbees-io/sonarqube-bundled-sast-scan-code@v1
         continue-on-error: true
         with:
           language: LANGUAGE_JS
           cover-file-name: coverage/clover.xml
           sonar-exclusion: tests/*
-      - uses: cloudbees-io/snyk-sast-scan-code@v1
-        name: Synk SAST
+      - name: Synk SAST
         kind: scan
+        uses: cloudbees-io/snyk-sast-scan-code@v1
         continue-on-error: true
         with:
           orgname: ${{ secrets.SNYK_ORGNAME }}
@@ -167,6 +170,11 @@ jobs:
             | MAJOR_COUNT          | ${{ steps.FetchSonarQubeIssues.outputs.MAJOR_COUNT }} |
             | MINOR_COUNT          | ${{ steps.FetchSonarQubeIssues.outputs.MINOR_COUNT }} |
           format: MARKDOWN
+    outputs:
+      BLOCKER_COUNT: ${{ steps.FetchSonarQubeIssues.outputs.BLOCKER_COUNT }}
+      CRITICAL_COUNT: ${{ steps.FetchSonarQubeIssues.outputs.CRITICAL_COUNT }}
+      MAJOR_COUNT: ${{ steps.FetchSonarQubeIssues.outputs.MAJOR_COUNT }}
+      MINOR_COUNT: ${{ steps.FetchSonarQubeIssues.outputs.MINOR_COUNT }}
   deploy:
     environment: DOW Production
     steps:
